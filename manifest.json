@@ -1,0 +1,15 @@
+{
+  "id": "./timertimer.html",
+  "name": "timertimer",
+  "short_name": "timertimer",
+  "start_url": "./timertimer.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "background_color": "#09090f",
+  "theme_color": "#09090f",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
