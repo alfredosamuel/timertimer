@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>timertimer 2.0</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg,#09090f);color:var(--fg);font:11px system-ui,"Segoe UI",sans-serif;overflow:hidden}
+.mono,#clock,#chr,#cdi{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums}
+#app{container-type:inline-size;position:relative;overflow:hidden;width:min(94vw,200px);height:200px;display:flex;flex-direction:column;justify-content:space-between;gap:5px;padding:8px;background:var(--bg);border:1px solid var(--ln);border-radius:14px;box-shadow:0 14px 40px #0007}
+#app.pip{width:100vw;height:100vh;border:0;border-radius:0;box-shadow:none}
+.clk{display:flex;align-items:baseline;justify-content:center;gap:6px}
+.clk small{font-size:8px;letter-spacing:.14em;color:var(--mu)}
+#clock{font-size:clamp(22px,14.5cqw,60px);font-weight:700;letter-spacing:-.04em;color:var(--fg)}
+#temp{padding:1px 6px;border-radius:99px;background:var(--sf);border:1px solid var(--ln);font-size:9px;font-weight:600;color:var(--f2)}
+.card{padding:5px 7px;background:var(--sf);border:1px solid var(--ln);border-radius:10px}
+.row{display:flex;align-items:center;gap:4px}
+.row>:first-child{flex:1;min-width:0}
+#chr,#cdi{font-size:clamp(14px,8.6cqw,34px);font-weight:600;color:var(--f2)}
+#chr i{font-style:normal;font-size:.62em;opacity:.6}
+#cdi{width:100%;padding:0;border:0;outline:0;background:none}
+#cdi:focus{color:var(--fg)}
+.b{display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;line-height:1;cursor:pointer;transition:.15s}
+.b:hover{border-color:var(--fg)}
+.b.run{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.b.rs:hover{border-color:var(--rd);color:var(--rd)}
+.b.s{width:20px;height:20px;font-size:11px;border-radius:7px}
+.bar{height:2px;margin-top:4px;border-radius:2px;background:var(--ln);overflow:hidden}
+.bar i{display:block;width:100%;height:100%;background:var(--fg)}
+.done{animation:fl .5s 6 alternate}
+@keyframes fl{to{border-color:var(--rd);box-shadow:0 0 12px var(--rd)}}
+footer{display:flex;align-items:center;gap:4px}
+#tk{flex:1;min-width:0;height:16px;line-height:16px;overflow:hidden;white-space:nowrap;text-align:center;font-size:10px;color:var(--mu)}
+#tk span{display:inline-block}
+.pb{display:inline-block;width:44px;height:4px;margin-right:5px;border-radius:4px;background:var(--ln);vertical-align:middle;overflow:hidden}
+.pb i{display:block;height:100%;background:var(--fg)}
+#menu{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;gap:8px;padding:10px;overflow:auto;background:var(--bg)}
+#menu[hidden]{display:none}
+#sws{display:flex;flex-wrap:wrap;gap:6px}
+.sw{width:20px;height:20px;padding:0;border:2px solid var(--ln);border-radius:50%;cursor:pointer}
+.sw i{display:block;width:100%;height:100%;border-radius:50%}
+.sw.on{border-color:var(--fg)}
+.tg{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11px;color:var(--f2)}
+.tg input[type=checkbox]{appearance:none;position:relative;width:28px;height:16px;margin:0;border-radius:16px;background:var(--ln);cursor:pointer;transition:.2s}
+.tg input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:10px;height:10px;border-radius:50%;background:var(--bg);transition:.2s}
+.tg input[type=checkbox]:checked{background:var(--fg)}
+.tg input[type=checkbox]:checked::after{left:15px}
+.tg select,.tg input[type=number]{padding:2px 3px;border:1px solid var(--ln);border-radius:6px;background:var(--sf);color:var(--fg);font:inherit}
+.tg input[type=number]{width:38px;text-align:center}
+.mb{padding:5px;border:1px solid var(--ln);border-radius:8px;background:var(--sf);color:var(--fg);font:inherit;cursor:pointer}
+#toast{position:absolute;left:8px;right:8px;bottom:34px;z-index:9;padding:5px 8px;border-radius:8px;background:var(--fg);color:var(--bg);font-size:10px;text-align:center;opacity:0;pointer-events:none;transition:.25s}
+#toast.on{opacity:1}
+#away{text-align:center;color:var(--mu)}
+#away button{margin-top:8px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<main id="app">
+  <section class="clk"><small>CL</small><b id="clock">00:00:00</b><span id="temp" class="mono">--°C</span></section>
+
+  <section class="card" title="Cronómetro">
+    <div class="row"><b id="chr">00:00:00<i>.00</i></b>
+      <button class="b" id="cp" title="Iniciar / pausar">▶</button>
+      <button class="b rs" id="cr" title="Reiniciar">↺</button></div>
+  </section>
+
+  <section class="card" id="cdc" title="Temporizador">
+
+    <div class="row"><input id="cdi" value="00:25:00" spellcheck="false" title="H:M:S, M:S o minutos">
+      <button class="b" id="dp" title="Iniciar / pausar">▶</button>
+      <button class="b rs" id="dr" title="Reiniciar">↺</button></div>
+    <div class="bar"><i id="cdb"></i></div>
+  </section>
+
+  <footer>
+    <div id="tk"></div>
+    <button class="b s" id="mn" title="Ajustes">⋯</button>
+    <button class="b s" id="pp" title="Ventana flotante (siempre encima)">⧉</button>
+  </footer>
+
+  <div id="menu" hidden>
+    <div id="sws"></div>
+    <label class="tg">Modo oscuro<input type="checkbox" id="mdk"></label>
+    <label class="tg">Anunciar la hora<input type="checkbox" id="man"></label>
+    <label class="tg">Voz cronómetro
+      <select id="mca"><option value="0">Off</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">1 hora</option></select></label>
+    <label class="tg">Despierto <span><input type="number" id="mwk" min="0" max="23"> a <input type="number" id="msl" min="0" max="23"></span></label>
+    <button class="mb" id="mcl">Cerrar</button>
+    <button class="mb" id="mqt" hidden>Salir de la app</button>
+  </div>
+  <div id="toast"></div>
+</main>
+
+<div id="away" hidden>Timer en ventana flotante.<br><button class="mb" id="back">Traer de vuelta</button></div>
+
+<script>
+const TZ='America/Santiago',K='timertimer2',app=document.getElementById('app'),$=s=>app.querySelector(s);
+const TH=[['Cozy',46,62,200,18],['Calculadora',36,90,135,65],['Elegante',350,55,40,25],['Cyberpunk',335,100,185,100],['Lofi',262,55,25,70],['Amber',40,100,28,100],['Matcha',130,38,100,45],['Midnight',218,100,345,100],['Rose Gold',350,100,20,100],['Slate',168,55,10,25]];
+let S={theme:0,dark:true,ann:false,cann:0,cd:1500,wake:10,sleep:2};
+try{Object.assign(S,JSON.parse(localStorage[K]||'{}'))}catch(e){}
+const save=()=>{try{localStorage[K]=JSON.stringify(S)}catch(e){}};
+const pad=n=>String(n).padStart(2,'0');
+const fT=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hourCycle:'h23',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const fH=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hourCycle:'h23',hour:'2-digit',minute:'2-digit'});
+const fD=new Intl.DateTimeFormat('es-CL',{timeZone:TZ,day:'numeric',month:'long'});
+const nowCL=()=>{const p={};fT.formatToParts(new Date()).forEach(x=>p[x.type]=+x.value);return p};
+const native=location.hash==='#native';
+let pip=null,W=window,L1,L2;
+
+/* ---------- tema ---------- */
+function paint(){
+  const[,h1,s1,h2,s2]=TH[S.theme],d=S.dark,v={
+    '--bg':d?`hsl(${h1} 25% 6%)`:`hsl(${h1} 35% 95%)`,
+    '--sf':d?`hsl(${h1} 22% 10.5%)`:`hsl(${h1} 30% 99%)`,
+    '--ln':d?`hsl(${h1} 20% 18%)`:`hsl(${h1} 22% 84%)`,
+    '--fg':d?`hsl(${h1} ${s1}% 62%)`:`hsl(${h1} ${s1}% 33%)`,
+    '--f2':d?`hsl(${h2} ${s2}% 74%)`:`hsl(${h2} ${s2}% 30%)`,
+    '--mu':d?`hsl(${h1} 12% 52%)`:`hsl(${h1} 14% 40%)`,
+    '--rd':d?'#e5534b':'#c0392b'};
+  [document.documentElement,app,...(pip?[pip.document.documentElement]:[])].forEach(e=>{for(const k in v)e.style.setProperty(k,v[k])});
+  if(pip)pip.document.body.style.background=v['--bg'];
+  document.querySelectorAll('.sw').forEach((b,i)=>b.classList.toggle('on',i==S.theme));
+}
+
+/* ---------- audio / voz ---------- */
+let ac;
+function beep(f,ms,at=0){const a=ac||(ac=new(window.AudioContext||webkitAudioContext)());a.resume();
+  const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+at;o.frequency.value=f;g.gain.value=.08;o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+ms/1000)}
+const speak=t=>{try{speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(t),{lang:'en-US'}))}catch(e){}};
+function chimeText(){const{hour:h,minute:m}=nowCL();
+  if(m==0&&h==12)return"It's noon";if(m==0&&h==0)return"It's midnight";
+  return"It's "+(h%12||12)+(m==30?' thirty ':' ')+(h<12?'AM':'PM')}
+function chronoText(m){const h=Math.floor(m/60),mm=m%60,p=[];
+  if(h)p.push(h==1?'one hour':h+' hours');if(mm)p.push(mm==1?'one minute':mm+' minutes');return p.length?p.join(', '):'zero'}
+
+/* ---------- cronómetro ---------- */
+const cr={on:false,acc:0,t0:0,last:-1},el=()=>cr.acc+(cr.on?performance.now()-cr.t0:0);
+function fmtC(ms){const c=Math.floor(ms/10),s=Math.floor(c/100);return`${pad(Math.floor(s/3600))}:${pad(Math.floor(s/60)%60)}:${pad(s%60)}<i>.${pad(c%100)}</i>`}
+$('#cp').onclick=()=>{if(cr.on){cr.acc+=performance.now()-cr.t0;cr.on=false}else{cr.t0=performance.now();cr.on=true}
+  $('#cp').textContent=cr.on?'⏸':'▶';$('#cp').classList.toggle('run',cr.on)};
+$('#cr').onclick=()=>{cr.on=false;cr.acc=0;cr.last=-1;$('#cp').textContent='▶';$('#cp').classList.remove('run');$('#chr').innerHTML=fmtC(0)};
+
+/* ---------- temporizador ---------- */
+const cd={on:false,left:S.cd*1000,end:0},cdi=$('#cdi');let dirty=false;
+const fmtD=ms=>{const s=Math.ceil(ms/1000);return`${pad(Math.floor(s/3600))}:${pad(Math.floor(s/60)%60)}:${pad(s%60)}`};
+function cdShow(){cdi.value=fmtD(cd.left);$('#cdb').style.width=(cd.left/(S.cd*1000)*100)+'%'}
+function cdUi(){$('#dp').textContent=cd.on?'⏸':'▶';$('#dp').classList.toggle('run',cd.on);cdi.readOnly=cd.on}
+function cdParse(){if(cd.on||!dirty)return;dirty=false;
+  const a=cdi.value.trim().split(':');let s=NaN;
+  if(a.length<=3&&a.every(x=>/^\d+$/.test(x))){const n=a.map(Number);s=a.length==3?n[0]*3600+n[1]*60+n[2]:a.length==2?n[0]*60+n[1]:n[0]*60}
+  if(isNaN(s)||s<=0)beep(440,150);else{S.cd=Math.min(s,359999);cd.left=S.cd*1000;save()}
+  cdShow()}
+cdi.oninput=()=>dirty=true;cdi.onblur=cdParse;cdi.onkeydown=e=>{if(e.key==='Enter')cdi.blur()};
+$('#dp').onclick=()=>{cdParse();
+  if(cd.on){cd.left=Math.max(0,cd.end-Date.now());cd.on=false}
+  else{if(cd.left<=0)cd.left=S.cd*1000;cd.end=Date.now()+cd.left;cd.on=true;$('#cdc').classList.remove('done')}
+  cdUi();cdShow()};
+$('#dr').onclick=()=>{cd.on=false;cd.left=S.cd*1000;$('#cdc').classList.remove('done');cdUi();cdShow()};
+function cdEnd(){cd.on=false;cd.left=S.cd*1000;cdUi();cdShow();$('#cdc').classList.add('done');for(let i=0;i<3;i++)beep(1200,200,i*.4)}
+
+/* ---------- clima ---------- */
+let WX={},nextWx=0;
+const WT={0:'Despejado',1:'Principalmente despejado',2:'Parcialmente nublado',3:'Nublado',45:'Niebla ligera',48:'Niebla con gotas',51:'Lluvia ligera',53:'Lluvia moderada',55:'Lluvia intensa',61:'Chubascos ligeros',63:'Chubascos moderados',65:'Chubascos intensos',71:'Nieve ligera',73:'Nieve moderada',75:'Nieve intensa',77:'Granizo',80:'Chubascos fuertes'};
+const wtxt=c=>[81,82,95,96,99].includes(c)?'Tormenta':WT[c]||'';
+async function wx(){
+  try{const j=await(await fetch('https://api.open-meteo.com/v1/forecast?latitude=-33.45&longitude=-70.65&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunset,sunrise')).json();
+    WX={t:j.current.temperature_2m,c:j.current.weather_code,sr:j.daily.sunrise[0],ss:j.daily.sunset[0],mx:j.daily.temperature_2m_max[0],mn:j.daily.temperature_2m_min[0]};
+    $('#temp').textContent=Math.round(WX.t)+'°C';nextWx=Date.now()+6e5}
+  catch(e){nextWx=Date.now()+6e4}}
+
+/* ---------- ticker (info desplegable) ---------- */
+const hm=iso=>iso?fH.format(new Date(iso+'Z')):'--:--',rd=n=>n==null?'--':Math.round(n);
+function items(){
+  const p=nowCL(),hr=p.hour+p.minute/60+p.second/3600,len=((S.sleep-S.wake)%24+24)%24||24,e=((hr-S.wake)%24+24)%24,pr=Math.round(Math.min(e/len,1)*100),
+    ph=((Date.now()-Date.UTC(2000,0,6))/864e5/29.53059)%1,moon=Math.round((1-Math.cos(2*Math.PI*ph))/2*100);
+  return[fD.format(new Date()),
+    `Santiago, ${rd(WX.t)}° C`,wtxt(WX.c)||' ',
+    `D: ${hm(WX.sr)}`,`N: ${hm(WX.ss)}`,
+    `Max/Min: ${rd(WX.mx)}/${rd(WX.mn)}`,
+    WX.c==null?'--':wtxt(WX.c)+' para hoy',
+    `Luna ${moon}%`,
+    `<span class="pb"><i style="width:${pr}%"></i></span>${pr}%`];
+}
+let ti=0,tT;
+function tick(){
+  const L=items(),box=$('#tk');box.innerHTML=`<span>${L[ti++%L.length]}</span>`;
+  const sp=box.firstChild,over=sp.scrollWidth-box.clientWidth;let d=3200;
+  sp.animate([{opacity:0},{opacity:1}],{duration:350});
+  if(over>0){const t=over*25;sp.animate([{transform:'translateX(0)'},{transform:'translateX(0)',offset:.25},{transform:`translateX(${-over}px)`}],{duration:3200+t,fill:'forwards'});d=3800+t}
+  clearTimeout(tT);tT=setTimeout(tick,d)}
+
+/* ---------- bucles ---------- */
+const clockEl=$('#clock'),chrEl=$('#chr');let lastChime=-1;
+function frame(){
+  const p=nowCL(),t=`${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;if(clockEl.textContent!==t)clockEl.textContent=t;
+  chrEl.innerHTML=fmtC(el());
+  if(cd.on){const r=cd.end-Date.now();if(r<=0)cdEnd();else{cdi.value=fmtD(r);$('#cdb').style.width=(r/(S.cd*1000)*100)+'%'}}}
+function slow(){
+  if(Date.now()>nextWx)wx();
+  const p=nowCL();
+  if(S.ann&&(p.minute==0||p.minute==30)){const slot=p.hour*2+p.minute/30;if(slot!==lastChime){lastChime=slot;speak(chimeText())}}
+  if(S.cann&&cr.on){const m=Math.floor(el()/6e4),k=Math.floor(m/S.cann);if(k>0&&k!==cr.last){cr.last=k;speak(chronoText(m))}}}
+function loops(w){try{W.clearInterval(L1);W.clearInterval(L2)}catch(e){}
+  W=w;L1=W.setInterval(frame,40);L2=W.setInterval(slow,5000)}
+
+/* ---------- menú ---------- */
+const menu=$('#menu');
+TH.forEach((t,i)=>{const b=document.createElement('button');b.className='sw';
+  b.title=t[0];b.innerHTML=`<i style="background:linear-gradient(135deg,hsl(${t[1]} ${t[2]}% 60%) 50%,hsl(${t[3]} ${t[4]}% 70%) 50%)"></i>`;
+  b.onclick=()=>{S.theme=i;save();paint()};$('#sws').append(b)});
+const mdk=$('#mdk'),man=$('#man'),mca=$('#mca'),mwk=$('#mwk'),msl=$('#msl');
+mdk.checked=S.dark;man.checked=S.ann;mca.value=S.cann;mwk.value=S.wake;msl.value=S.sleep;
+mdk.onchange=()=>{S.dark=mdk.checked;save();paint()};
+man.onchange=()=>{S.ann=man.checked;save()};
+mca.onchange=()=>{S.cann=+mca.value;cr.last=-1;save()};
+const hr=(inp,k)=>inp.onchange=()=>{const v=Math.min(23,Math.max(0,Math.floor(+inp.value)||0));S[k]=v;inp.value=v;save()};
+hr(mwk,'wake');hr(msl,'sleep');
+$('#mn').onclick=()=>menu.hidden=!menu.hidden;$('#mcl').onclick=()=>menu.hidden=true;
+
+/* ---------- ventana flotante (siempre encima) ---------- */
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3500)}
+async function pop(){
+  if(pip){pip.close();return}
+  if(!('documentPictureInPicture' in window))return toast('Tu navegador no soporta ventana flotante. Usa Chrome o Edge.');
+  try{pip=await documentPictureInPicture.requestWindow({width:200,height:200})}catch(e){return toast('No se pudo abrir la ventana flotante.')}
+  document.querySelectorAll('style').forEach(s=>pip.document.head.append(s.cloneNode(true)));
+  pip.document.title='timertimer';pip.document.body.append(app);
+  app.classList.add('pip');document.getElementById('away').hidden=false;$('#pp').textContent='↩';
+  paint();loops(pip);tick();
+  pip.addEventListener('pagehide',()=>{document.body.prepend(app);app.classList.remove('pip');pip=null;
+    document.getElementById('away').hidden=true;$('#pp').textContent='⧉';paint();loops(window);tick()});
+}
+$('#pp').onclick=pop;document.getElementById('back').onclick=pop;
+
+/* ---------- modo app nativa (launcher con pywebview) ---------- */
+if(native){app.classList.add('pip');$('#pp').hidden=true;$('#mqt').hidden=false;$('#mqt').onclick=()=>window.pywebview&&pywebview.api.close()}
+
+/* ---------- inicio ---------- */
+paint();cdShow();cdUi();loops(window);wx();tick();
+</script>
+</body>
+</html>
