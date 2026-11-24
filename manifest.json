@@ -1,8 +1,8 @@
 {
-  "id": "./timertimer.html",
+  "id": "./",
   "name": "timertimer",
   "short_name": "timertimer",
-  "start_url": "./timertimer.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
